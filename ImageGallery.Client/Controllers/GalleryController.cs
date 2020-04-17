@@ -1,6 +1,12 @@
-﻿using ImageGallery.Client.ViewModels;
+﻿using IdentityModel.Client;
+using ImageGallery.Client.ViewModels;
 using ImageGallery.Model;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -11,6 +17,7 @@ using System.Threading.Tasks;
 
 namespace ImageGallery.Client.Controllers
 { 
+    [Authorize]
     public class GalleryController : Controller
     {
         private readonly IHttpClientFactory _httpClientFactory;
@@ -171,6 +178,55 @@ namespace ImageGallery.Client.Controllers
             response.EnsureSuccessStatusCode();
 
             return RedirectToAction("Index");
+        }
+
+        public async Task<IActionResult> IdentityInformation() {
+            // This gets the saved token
+            
+            var token = await HttpContext.GetTokenAsync(OpenIdConnectParameterNames.IdToken);
+            ViewData["token"] = token;
+            return View();
+
+            
+        }
+
+        [Authorize(Roles ="PayingUser")]
+        public async Task<IActionResult> OrderFrame()
+        {
+            // CALL IDP
+
+            var idpClient = _httpClientFactory.CreateClient("IDPClient");
+
+            // Get UserInfo Endpoint from Dicovery Endpoint.  This is the best way to get Endpoints
+
+            var metaDataResponse = await idpClient.GetDiscoveryDocumentAsync();
+            if (metaDataResponse.IsError)
+                throw new Exception("Problem accessing the discovery Endpoint.", metaDataResponse.Exception);
+
+            // This gets the saved token
+            var accessToken = await HttpContext.GetTokenAsync(OpenIdConnectParameterNames.AccessToken);
+
+            var userInfoResponse = await idpClient.GetUserInfoAsync(
+                new UserInfoRequest
+                {
+                    Address = metaDataResponse.UserInfoEndpoint,
+                    Token = accessToken
+
+                });
+            if (userInfoResponse.IsError)
+                throw new Exception("Problem accessing the UserInfo Endpoint.", userInfoResponse.Exception);
+
+            var address = userInfoResponse.Claims.FirstOrDefault(c => c.Type == "address")?.Value;
+            return View(new OrderFrameViewModel(address));
+
+
+        }
+
+        public async Task Logout() {
+            // Clears cookies in the client1
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            // This will redirect to the endSession endpoint in the IDP
+            await HttpContext.SignOutAsync(OpenIdConnectDefaults.AuthenticationScheme);
         }
     }
 }

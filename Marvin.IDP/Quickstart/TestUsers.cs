@@ -22,6 +22,9 @@ namespace Marvin.IDP
                    
                     new Claim(JwtClaimTypes.GivenName, "Frank"),
                     new Claim(JwtClaimTypes.FamilyName, "Smith"),
+                    new Claim(JwtClaimTypes.Address, "21 Woodycrest Rd, Meriden CT 06451"),
+                    new Claim("role", "FreeUser")
+
                 }
             },
             new TestUser{
@@ -32,8 +35,13 @@ namespace Marvin.IDP
                 {
                     new Claim(JwtClaimTypes.GivenName, "Claire"),
                     new Claim(JwtClaimTypes.FamilyName, "Smith"),
+                    new Claim(JwtClaimTypes.Address, "20 Woodycrest Rd, Meriden CT 06451"),
+                    new Claim("role", "PayingUser")
 
                 }
+                
+                
+                
             }
         };
     }
